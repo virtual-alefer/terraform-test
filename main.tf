@@ -6,7 +6,7 @@ resource "aws_instance" "example" {
     ami           = "ami-0c55b159cbfafe1f0"
     instance_type = "t2.micro"
     vpc_security_group_ids = [aws_security_group.instance.id]
-    user_data = <<-EOF
+        user_data = <<-EOF
                 #!/bin/bash
                 echo "Hello, World!" > index.html
                 nohup busybox httpd -f -p ${var.server_port} &
@@ -26,6 +26,34 @@ resource "aws_security_group" "instance" {
         to_port     = var.server_port
         protocol    = "tcp"
         cidr_blocks = ["0.0.0.0/0"]
+    }
+}
+
+resource "aws_launch_configuration" "example" {
+    name          = "example-launch-configuration"
+    image_id      = "ami-0c55b159cbfafe1f0"
+    instance_type  = "t2.micro"
+    security_groups = [aws_security_group.instance.id]
+    user_data = <<-EOF
+                #!/bin/bash
+                echo "Hello, World!" > index.html
+                nohup busybox httpd -f -p ${var.server_port} &
+                EOF
+    
+}
+
+resource "aws_autoscaling_group" "example" {
+    name                      = "example-autoscaling-group"
+    launch_configuration      = aws_launch_configuration.example.name
+    min_size                  = 2
+    max_size                  = 10
+    vpc_zone_identifier       = [aws_subnet.example.id]
+    health_check_type         = "EC2"
+    health_check_grace_period = 300
+    tag {
+        key                 = "Name"
+        value               = "ExampleAutoScalingGroup"
+        propagate_at_launch = true
     }
 }
 
@@ -75,3 +103,7 @@ variable "server_port" {
     default     = 8080
 }
 
+output "instance_public_ip" {
+    value = aws_instance.example.public_ip
+    description = "The public IP address of the example instance"
+}
