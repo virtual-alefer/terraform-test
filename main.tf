@@ -29,31 +29,51 @@ resource "aws_security_group" "instance" {
     }
 }
 
-resource "aws_launch_configuration" "example" {
-    name          = "example-launch-configuration"
+resource "aws_launch_template" "example" {
+    name          = "example-launch-template"
     image_id      = "ami-0c55b159cbfafe1f0"
-    instance_type  = "t2.micro"
-    security_groups = [aws_security_group.instance.id]
-    user_data = <<-EOF
+    instance_type = "t2.micro"
+    vpc_security_group_ids = [aws_security_group.instance.id]
+    user_data = base64encode(<<-EOF
                 #!/bin/bash
                 echo "Hello, World!" > index.html
                 nohup busybox httpd -f -p ${var.server_port} &
                 EOF
-    
+    )
+}
+
+data "aws_vpc" "default" {
+    default = true
+}
+
+data "aws_subnets" "default" {
+    filter {
+        name   = "vpc-id"
+        values = [data.aws_vpc.default.id]
+    }
 }
 
 resource "aws_autoscaling_group" "example" {
     name                      = "example-autoscaling-group"
-    launch_configuration      = aws_launch_configuration.example.name
     min_size                  = 2
     max_size                  = 10
-    vpc_zone_identifier       = [aws_subnet.example.id]
     health_check_type         = "EC2"
     health_check_grace_period = 300
+    vpc_zone_identifier       = data.aws_subnets.default.ids
+
+    launch_template {
+        id      = aws_launch_template.example.id
+        version = "$Latest"
+    }
+
     tag {
         key                 = "Name"
         value               = "ExampleAutoScalingGroup"
         propagate_at_launch = true
+    }
+
+    lifecycle {
+        create_before_destroy = true
     }
 }
 
