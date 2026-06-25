@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 resource "aws_instance" "example" {
-    ami           = "ami-0629230e5b69c3a64"
+    ami           = "ami-0e3664fd55710525b"
     instance_type = "t2.micro"
     vpc_security_group_ids = [aws_security_group.instance.id]
         user_data = <<-EOF
@@ -31,7 +31,7 @@ resource "aws_security_group" "instance" {
 
 resource "aws_launch_template" "example" {
     name          = "example-launch-template"
-    image_id      = "ami-0629230e5b69c3a64"
+    image_id      = "ami-0e3664fd55710525b"
     instance_type = "t2.micro"
     vpc_security_group_ids = [aws_security_group.instance.id]
     user_data = base64encode(<<-EOF
